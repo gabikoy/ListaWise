@@ -1,0 +1,84 @@
+{
+  "project": "ListaWise",
+  "canvas": {
+    "width": 1440,
+    "height": 1024,
+    "grid": 8,
+    "background": "#F4F5F7"
+  },
+  "colors": {
+    "primary": "#6B74D6",
+    "primaryDark": "#4B52B0",
+    "primaryLight": "#E8EAFA",
+    "navy": "#1E2254",
+    "amber": "#C9963A",
+    "amberLight": "#E8C97A",
+    "red": "#C45C5C",
+    "redLight": "#F8EEEE",
+    "green": "#3D8B7A",
+    "greenLight": "#EEF6F3",
+    "background": "#F4F5F7",
+    "card": "#FFFFFF",
+    "border": "#1A1E223C",
+    "textDark": "#1E2254",
+    "textMid": "#3A3F6A",
+    "textMuted": "#7A1E2254",
+    "textLight": "#9AA0B8"
+  },
+  "typography": {
+    "brand": {
+      "font": "Fraunces",
+      "weight": 400,
+      "size": 28,
+      "letterSpacing": -0.5
+    },
+    "heading": {
+      "font": "Inter",
+      "weight": 600,
+      "size": 24
+    },
+    "body": {
+      "font": "Inter",
+      "weight": 400,
+      "size": 14
+    },
+    "label": {
+      "font": "JetBrains Mono",
+      "weight": 500,
+      "size": 10,
+      "letterSpacing": 1.8
+    }
+  },
+  "screens": [
+    {
+      "name": "Login",
+      "layout": "two-column",
+      "leftWidth": 58,
+      "rightWidth": 42,
+      "leftBackground": "linear-gradient(#7B86E8, #5B64C8, #4A54B8)",
+      "leftContent": [
+        "Brand title: ListaWise",
+        "Feature row icons and labels",
+        "Footer text: LICENSED · COMPLIANT · EFFECTIVE"
+      ],
+      "rightContent": [
+        "Title: Welcome Back",
+        "Username input",
+        "Password input",
+        "Primary sign in button",
+        "Demo credentials row"
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "layout": "sidebar + main",
+      "sidebar": "#1E2254",
+      "cards": [
+        "Summary metric card",
+        "Customer table",
+        "Recent activity panel",
+        "Debt overview chart"
+      ]
+    }
+  ]
+}
