@@ -1,6 +1,6 @@
 // Centralized API Client for ListaWise
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || '/api';
 
 export class ApiError extends Error {
   constructor(message, status = 500, data = null) {
@@ -66,11 +66,12 @@ export const api = {
     return handleResponse(res);
   },
 
-  async post(endpoint, body = {}) {
+  async post(endpoint, body = {}, { signal } = {}) {
     const res = await fetch(API_BASE + endpoint, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(body),
+      signal,
     });
     return handleResponse(res);
   },

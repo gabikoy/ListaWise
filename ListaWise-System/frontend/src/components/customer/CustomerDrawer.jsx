@@ -3,7 +3,6 @@ import {
   X,
   PlusCircle,
   CheckCircle2,
-  MessageSquare,
   Trash2,
   Calendar,
   CreditCard,
@@ -12,14 +11,12 @@ import {
   Phone,
   MapPin,
   Clock,
-  Printer,
   ShieldAlert,
 } from 'lucide-react';
 import { RiskBadge, TransactionBadge } from '../common/Badge';
 import { Button } from '../common/Button';
 import { AddDebtModal } from './AddDebtModal';
 import { RecordPaymentModal } from './RecordPaymentModal';
-import { SmsReminderModal } from './SmsReminderModal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../api/client';
@@ -38,7 +35,6 @@ export function CustomerDrawer({
   // Modals state
   const [showAddDebt, setShowAddDebt] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [showSms, setShowSms] = useState(false);
 
   const { isOwner } = useAuth();
   const { success, error } = useToast();
@@ -104,10 +100,6 @@ export function CustomerDrawer({
     } catch (err) {
       error(err.message || 'Failed to delete customer.');
     }
-  };
-
-  const handlePrintStatement = () => {
-    window.print();
   };
 
   const debts = customer?.debts || [];
@@ -308,24 +300,9 @@ export function CustomerDrawer({
                 >
                   Record Payment
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={MessageSquare}
-                  onClick={() => setShowSms(true)}
-                >
-                  SMS Reminder
-                </Button>
               </div>
 
               <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  onClick={handlePrintStatement}
-                  className="btn btn-secondary btn-sm"
-                  title="Print Statement of Account"
-                >
-                  <Printer size={14} />
-                </button>
                 {isOwner && (
                   <button
                     onClick={handleDeleteCustomer}
@@ -634,13 +611,6 @@ export function CustomerDrawer({
         />
       )}
 
-      {showSms && (
-        <SmsReminderModal
-          isOpen={showSms}
-          onClose={() => setShowSms(false)}
-          customer={customer}
-        />
-      )}
     </>
   );
 }

@@ -87,6 +87,9 @@ export function LoginView() {
         name: regStoreName.trim() ? `${regStoreName.trim()} (${regFullName.trim() || regUsername})` : regFullName.trim() || regUsername,
         role: regRole,
       });
+      setLoginUser(regUsername.trim());
+      setLoginPass('');
+      setMode('login');
     } catch (_) {
       // Toast already shown
     } finally {
@@ -110,6 +113,9 @@ export function LoginView() {
         name: signUpStoreName.trim() || signUpUsername,
         role: 'owner',
       });
+      setLoginUser(signUpUsername.trim());
+      setLoginPass('');
+      setMode('login');
       // Close modal on success
       setShowSignUpModal(false);
     } catch (_) {

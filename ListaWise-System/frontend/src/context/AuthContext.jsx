@@ -67,12 +67,11 @@ export function AuthProvider({ children }) {
     setIsLoading(true);
     try {
       const res = await api.post('/register', { username, password, name, role });
-      localStorage.setItem('lw_auth_token', res.token);
-      localStorage.setItem('lw_auth_user', JSON.stringify(res.user));
-      setToken(res.token);
-      setUser(res.user);
-      lastActivityRef.current = Date.now();
-      success(`Welcome to ListaWise, ${res.user.name || res.user.username}!`);
+      localStorage.removeItem('lw_auth_token');
+      localStorage.removeItem('lw_auth_user');
+      setToken(null);
+      setUser(null);
+      success('Account created successfully. Please log in.');
       return res;
     } catch (err) {
       error(err.message || 'Registration failed.');

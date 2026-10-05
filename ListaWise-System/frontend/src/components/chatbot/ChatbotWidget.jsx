@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUp, X } from 'lucide-react';
 import { api } from '../../api/client';
 
@@ -23,20 +23,32 @@ export function ChatbotWidget() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const messagesContainerRef = useRef(null);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    container?.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+  }, [messages, isLoading, isOpen]);
 
   const submitMessage = async (event) => {
     event.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || isLoading) return;
     const text = message.trim();
     setMessage('');
     setMessages((current) => [...current, { role: 'user', text }]);
     setIsLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
     try {
-      const data = await api.post('/chat', { message: text });
+      const data = await api.post('/chat', { message: text }, { signal: controller.signal });
       setMessages((current) => [...current, { role: 'assistant', text: data.reply }]);
     } catch (error) {
-      setMessages((current) => [...current, { role: 'assistant', text: getChatErrorMessage(error), error: true }]);
+      const text = controller.signal.aborted
+        ? 'The assistant took too long to respond. Please try again.'
+        : getChatErrorMessage(error);
+      setMessages((current) => [...current, { role: 'assistant', text, error: true }]);
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
@@ -69,7 +81,7 @@ export function ChatbotWidget() {
         </button>
       </header>
 
-      <div className="chatbot-messages">
+      <div className="chatbot-messages" ref={messagesContainerRef} aria-live="polite">
         <div className="chatbot-message-row assistant">
           <img src="/chatbot-logo.png" alt="" />
           <p>Hi! I&apos;m your ListaWise AI assistant.<br />Ask me anything about your store&apos;s credit data.</p>
@@ -101,8 +113,9 @@ export function ChatbotWidget() {
           onChange={(event) => setMessage(event.target.value)}
           placeholder="Ask about your store..."
           aria-label="Ask ListaWise AI"
+          disabled={isLoading}
         />
-        <button type="submit" aria-label="Send message" disabled={!message.trim()}>
+        <button type="submit" aria-label="Send message" disabled={!message.trim() || isLoading}>
           <ArrowUp size={17} />
         </button>
       </form>

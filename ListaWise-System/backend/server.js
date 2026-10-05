@@ -261,16 +261,35 @@ let demoPayments = [
   },
 ];
 
+const demoStore = {
+  customers: demoCustomers,
+  debts: demoDebts,
+  payments: demoPayments,
+};
+const userStores = new Map([
+  [1, demoStore],
+  [2, demoStore],
+  [3, demoStore],
+]);
+
+function createEmptyStore() {
+  return { customers: [], debts: [], payments: [] };
+}
+
+function getStore(userId) {
+  return userStores.get(Number(userId));
+}
+
 // Helper to compute complete customer ledger summary
-function calcCustomerSummary(customerId) {
-  const customer = demoCustomers.find((item) => item.id === customerId);
+function calcCustomerSummary(customerId, store) {
+  const customer = store.customers.find((item) => item.id === customerId);
   if (!customer) return null;
 
-  const debts = demoDebts
+  const debts = store.debts
     .filter((item) => item.customer_id === customerId)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  const payments = demoPayments
+  const payments = store.payments
     .filter((item) => item.customer_id === customerId)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
@@ -354,9 +373,9 @@ function calcCustomerSummary(customerId) {
   };
 }
 
-function getCustomerList() {
-  return demoCustomers
-    .map((customer) => calcCustomerSummary(customer.id))
+function getCustomerList(store) {
+  return store.customers
+    .map((customer) => calcCustomerSummary(customer.id, store))
     .filter(Boolean);
 }
 
@@ -368,11 +387,11 @@ function sanitizeCustomerPayload(body) {
   return { name, phone, address, credit_limit };
 }
 
-function computeDashboard() {
-  const items = getCustomerList();
+function computeDashboard(store) {
+  const items = getCustomerList(store);
   const totalOutstanding = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
-  const totalCollected = demoPayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const totalCreditIssued = demoDebts.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalCollected = store.payments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalCreditIssued = store.debts.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   const activeWithBalance = items.filter((item) => item.balance > 0);
   const overdueCount = items.filter((item) => Number(item.days_outstanding || 0) >= 30).length;
@@ -384,8 +403,8 @@ function computeDashboard() {
     .slice(0, 5);
 
   const recentTransactions = [
-    ...demoDebts.map((d) => {
-      const c = demoCustomers.find((cust) => cust.id === d.customer_id);
+    ...store.debts.map((d) => {
+      const c = store.customers.find((cust) => cust.id === d.customer_id);
       return {
         id: `d-${d.id}`,
         customer_name: c ? c.name : 'Unknown Customer',
@@ -396,8 +415,8 @@ function computeDashboard() {
         created_at: d.created_at,
       };
     }),
-    ...demoPayments.map((p) => {
-      const c = demoCustomers.find((cust) => cust.id === p.customer_id);
+    ...store.payments.map((p) => {
+      const c = store.customers.find((cust) => cust.id === p.customer_id);
       return {
         id: `p-${p.id}`,
         customer_name: c ? c.name : 'Unknown Customer',
@@ -447,7 +466,7 @@ app.get('/api/auth/setup-required', (_req, res) => {
   res.json({ setupRequired: false });
 });
 
-app.post('/api/login', authLimiter, async (req, res) => {
+const handleLogin = async (req, res) => {
   const username = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
 
@@ -491,6 +510,10 @@ app.post('/api/login', authLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password.' });
     }
 
+    if (pool && !getStore(user.id)) {
+      userStores.set(Number(user.id), createEmptyStore());
+    }
+
     const token = jwt.sign(
       { userId: user.id, username: user.username, role: user.role },
       JWT_SECRET,
@@ -510,7 +533,10 @@ app.post('/api/login', authLimiter, async (req, res) => {
     console.error('Login error:', error);
     return res.status(500).json({ error: 'Authentication service encountered an error.' });
   }
-});
+};
+
+app.post('/api/login', authLimiter, handleLogin);
+app.post('/api/auth/login', authLimiter, handleLogin);
 
 // ─── Registration Endpoint ────────────────────────────────────────────────────
 const handleRegister = async (req, res) => {
@@ -541,6 +567,7 @@ const handleRegister = async (req, res) => {
         [username, passwordHash, role, name]
       );
       const newUser = inserted.rows[0];
+      userStores.set(Number(newUser.id), createEmptyStore());
 
       const token = jwt.sign(
         { userId: newUser.id, username: newUser.username, role: newUser.role },
@@ -571,6 +598,7 @@ const handleRegister = async (req, res) => {
       };
 
       demoUsers.push(newUser);
+      userStores.set(newUser.id, createEmptyStore());
 
       const token = jwt.sign(
         { userId: newUser.id, username: newUser.username, role: newUser.role },
@@ -600,6 +628,18 @@ app.post('/api/auth/register', authLimiter, handleRegister);
 
 // ─── Authenticated Routes ─────────────────────────────────────────────────────
 app.use('/api', authMiddleware);
+app.use('/api', (req, res, next) => {
+  let store = getStore(req.userId);
+  if (!store && pool) {
+    store = createEmptyStore();
+    userStores.set(Number(req.userId), store);
+  }
+  if (!store) {
+    return res.status(401).json({ error: 'No ledger is associated with this account.' });
+  }
+  req.store = store;
+  return next();
+});
 
 app.get('/api/auth/me', (req, res) => {
   const user = demoUsers.find((u) => u.id === req.userId) || {
@@ -680,19 +720,19 @@ app.put('/api/auth/password', async (req, res) => {
 });
 
 // ─── Dashboard & Analytics ────────────────────────────────────────────────────
-app.get('/api/dashboard', (_req, res) => {
-  res.json(computeDashboard());
+app.get('/api/dashboard', (req, res) => {
+  res.json(computeDashboard(req.store));
 });
 
-app.get('/api/overdue', (_req, res) => {
-  const overdue = getCustomerList()
+app.get('/api/overdue', (req, res) => {
+  const overdue = getCustomerList(req.store)
     .filter((c) => Number(c.days_outstanding || 0) >= 30 && c.balance > 0)
     .sort((a, b) => b.days_outstanding - a.days_outstanding);
   res.json(overdue);
 });
 
-app.get('/api/risk', (_req, res) => {
-  const list = getCustomerList();
+app.get('/api/risk', (req, res) => {
+  const list = getCustomerList(req.store);
   const summary = {
     highRisk: list.filter((c) => c.risk === 'HIGH' && c.balance > 0),
     moderateRisk: list.filter((c) => c.risk === 'MODERATE' && c.balance > 0),
@@ -703,8 +743,8 @@ app.get('/api/risk', (_req, res) => {
   res.json(summary);
 });
 
-app.get('/api/reports/summary', (_req, res) => {
-  const list = getCustomerList();
+app.get('/api/reports/summary', (req, res) => {
+  const list = getCustomerList(req.store);
   const totalBalance = list.reduce((sum, c) => sum + c.balance, 0);
 
   const aging = {
@@ -733,48 +773,96 @@ app.get('/api/reports/summary', (_req, res) => {
 app.post('/api/chat', async (req, res) => {
   const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
   if (!message) return res.status(400).json({ error: 'Message is required.' });
-  if (!process.env.OPENROUTER_API_KEY) {
-    return res.status(503).json({ error: 'AI chat is not configured.' });
-  }
 
-  const customers = getCustomerList();
+  const customers = getCustomerList(req.store);
+  const totalBalance = customers.reduce((sum, c) => sum + (c.balance || 0), 0);
+  const highRisk = customers.filter((c) => c.risk === 'HIGH');
+  const mostOverdue = [...customers].sort((a, b) => (b.days_outstanding || 0) - (a.days_outstanding || 0))[0];
+
   const customerSummary = customers
     .map((customer) => `${customer.name}: ₱${Number(customer.balance || 0).toFixed(2)} balance, ${customer.days_outstanding || 0} days outstanding, ${customer.risk || 'UNKNOWN'} risk`)
     .join('\n');
 
+  // Intelligent local fallback if OpenRouter is unreachable or credit-limited
+  const getLocalFallbackReply = (msg) => {
+    const lower = msg.toLowerCase();
+    if (lower.includes('total utang') || lower.includes('total balance') || lower.includes('how much debt')) {
+      return `The total outstanding debt across all ${customers.length} customer(s) is ₱${totalBalance.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`;
+    }
+    if (lower.includes('high risk') || lower.includes('who is high risk') || lower.includes("who's high risk")) {
+      if (highRisk.length === 0) return 'Great news! There are currently no high-risk customers recorded in your store ledger.';
+      return `There are currently ${highRisk.length} high-risk customer(s):\n` + highRisk.map(c => `• ${c.name} (₱${c.balance.toFixed(2)} - ${c.days_outstanding} days overdue)`).join('\n');
+    }
+    if (lower.includes('most overdue') || lower.includes('oldest debt') || lower.includes('overdue')) {
+      if (!mostOverdue || mostOverdue.balance <= 0) return 'All customer balances are currently up to date!';
+      return `The most overdue customer is ${mostOverdue.name} with an outstanding balance of ₱${mostOverdue.balance.toFixed(2)} (${mostOverdue.days_outstanding} days outstanding).`;
+    }
+    if (lower.includes('reminder') || lower.includes('draft')) {
+      const matched = customers.find(c => lower.includes(c.name.toLowerCase())) || mostOverdue;
+      if (matched) {
+        return `Magandang araw po, ${matched.name}! Paalala lang po mula sa tindahan ukol sa inyong balance na ₱${matched.balance.toFixed(2)} (${matched.days_outstanding} days outstanding). Maaari po kayong mag-settle sa tindahan. Maraming salamat po!`;
+      }
+    }
+    // Check if user is asking about a specific customer
+    const foundCustomer = customers.find(c => lower.includes(c.name.toLowerCase()));
+    if (foundCustomer) {
+      return `${foundCustomer.name}: Outstanding balance of ₱${foundCustomer.balance.toFixed(2)}, ${foundCustomer.days_outstanding} days outstanding, Risk level: ${foundCustomer.risk}.`;
+    }
+    return `Hello po! I am your ListaWise store assistant. Total active utang is ₱${totalBalance.toFixed(2)} across ${customers.length} customer(s). You can ask me about total utang, who is high risk, most overdue customers, or draft payment reminders!`;
+  };
+
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    if (!process.env.OPENROUTER_API_KEY) {
+      return res.json({ reply: getLocalFallbackReply(message) });
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    let response;
+    let data;
+    try {
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'X-OpenRouter-Title': 'ListaWise',
+        'HTTP-Referer': 'http://localhost:3000',
       },
       body: JSON.stringify({
-        model: 'inclusionai/ling-3.0-flash-fin',
+        model: 'openrouter/free',
         messages: [
           {
             role: 'system',
-            content: `You are ListaWise AI, a concise and friendly assistant for a sari-sari store. Answer only questions about the store credit records below. Use Philippine pesos and English or Taglish to match the user.\n\n${customerSummary || 'No customer records available.'}`,
+            content: `You are ListaWise AI, a concise and friendly assistant for a sari-sari store in the Philippines. Answer questions accurately based only on the store credit records below. Use Philippine pesos (₱) and polite English or Taglish.\n\nStore Credit Records:\n${customerSummary || 'No customer records available.'}`,
           },
           { role: 'user', content: message },
         ],
         temperature: 0.7,
         max_tokens: 512,
       }),
-    });
-    const data = await response.json();
-    if (!response.ok) return res.status(response.status === 429 ? 429 : 502).json({ error: data?.error?.message || 'AI service request failed.' });
-    res.json({ reply: data.choices?.[0]?.message?.content || 'I could not generate a response.' });
+        signal: controller.signal,
+      });
+
+      data = await response.json();
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    if (!response.ok || !data.choices?.[0]?.message?.content) {
+      console.warn('OpenRouter returned non-OK status, switching to local store assistant fallback:', data?.error?.message);
+      return res.json({ reply: getLocalFallbackReply(message) });
+    }
+
+    return res.json({ reply: data.choices[0].message.content });
   } catch (error) {
-    console.error('Chat request failed:', error.message);
-    res.status(502).json({ error: 'Unable to reach the AI service.' });
+    console.error('Chat request error, using fallback:', error.message);
+    return res.json({ reply: getLocalFallbackReply(message) });
   }
 });
 
 // ─── CSV Export Endpoint ──────────────────────────────────────────────────────
-app.get('/api/export', (_req, res) => {
-  const list = getCustomerList();
+app.get('/api/export', (req, res) => {
+  const list = getCustomerList(req.store);
   let csv = 'ID,Name,Phone,Address,Total Debt (PHP),Total Paid (PHP),Balance (PHP),Days Outstanding,Risk Status,Created At\n';
 
   list.forEach((c) => {
@@ -800,7 +888,7 @@ app.get('/api/export', (_req, res) => {
 
 // ─── Customers CRUD ───────────────────────────────────────────────────────────
 app.get('/api/customers', (req, res) => {
-  let list = getCustomerList();
+  let list = getCustomerList(req.store);
   const q = typeof req.query?.q === 'string' ? req.query.q.trim().toLowerCase() : '';
   const riskFilter = typeof req.query?.risk === 'string' ? req.query.risk.toUpperCase() : '';
 
@@ -822,7 +910,7 @@ app.get('/api/customers', (req, res) => {
 
 app.get('/api/customers/:id', (req, res) => {
   const customerId = Number(req.params.id);
-  const customer = calcCustomerSummary(customerId);
+  const customer = calcCustomerSummary(customerId, req.store);
   if (!customer) {
     return res.status(404).json({ error: 'Customer not found.' });
   }
@@ -835,7 +923,8 @@ app.post('/api/customers', requireOwner, (req, res) => {
     return res.status(400).json({ error: 'Customer full name is required.' });
   }
 
-  const nextId = demoCustomers.reduce((max, item) => Math.max(max, item.id), 0) + 1;
+  const { customers } = req.store;
+  const nextId = customers.reduce((max, item) => Math.max(max, item.id), 0) + 1;
   const customer = {
     id: nextId,
     name: payload.name,
@@ -846,13 +935,14 @@ app.post('/api/customers', requireOwner, (req, res) => {
     created_at: new Date().toISOString(),
   };
 
-  demoCustomers.push(customer);
-  return res.status(201).json(calcCustomerSummary(customer.id));
+  customers.push(customer);
+  return res.status(201).json(calcCustomerSummary(customer.id, req.store));
 });
 
 app.put('/api/customers/:id', requireOwner, (req, res) => {
   const customerId = Number(req.params.id);
-  const index = demoCustomers.findIndex((item) => item.id === customerId);
+  const { customers } = req.store;
+  const index = customers.findIndex((item) => item.id === customerId);
   if (index === -1) {
     return res.status(404).json({ error: 'Customer not found.' });
   }
@@ -862,27 +952,28 @@ app.put('/api/customers/:id', requireOwner, (req, res) => {
     return res.status(400).json({ error: 'Customer full name is required.' });
   }
 
-  demoCustomers[index] = {
-    ...demoCustomers[index],
+  customers[index] = {
+    ...customers[index],
     name: payload.name,
     phone: payload.phone,
     address: payload.address,
-    credit_limit: payload.credit_limit || demoCustomers[index].credit_limit,
+    credit_limit: payload.credit_limit || customers[index].credit_limit,
   };
 
-  return res.json(calcCustomerSummary(customerId));
+  return res.json(calcCustomerSummary(customerId, req.store));
 });
 
 app.delete('/api/customers/:id', requireOwner, (req, res) => {
   const customerId = Number(req.params.id);
-  const index = demoCustomers.findIndex((item) => item.id === customerId);
+  const { customers, debts, payments } = req.store;
+  const index = customers.findIndex((item) => item.id === customerId);
   if (index === -1) {
     return res.status(404).json({ error: 'Customer not found.' });
   }
 
-  demoCustomers.splice(index, 1);
-  demoDebts = demoDebts.filter((item) => item.customer_id !== customerId);
-  demoPayments = demoPayments.filter((item) => item.customer_id !== customerId);
+  customers.splice(index, 1);
+  req.store.debts = debts.filter((item) => item.customer_id !== customerId);
+  req.store.payments = payments.filter((item) => item.customer_id !== customerId);
 
   return res.json({ success: true, message: 'Customer and all records removed.' });
 });
@@ -890,7 +981,8 @@ app.delete('/api/customers/:id', requireOwner, (req, res) => {
 // ─── Debts & Payments Endpoints ───────────────────────────────────────────────
 app.post('/api/customers/:id/debts', requireOwner, (req, res) => {
   const customerId = Number(req.params.id);
-  const customer = demoCustomers.find((c) => c.id === customerId);
+  const { customers, debts } = req.store;
+  const customer = customers.find((c) => c.id === customerId);
   if (!customer) {
     return res.status(404).json({ error: 'Customer not found.' });
   }
@@ -910,7 +1002,7 @@ app.post('/api/customers/:id/debts', requireOwner, (req, res) => {
     created_at: new Date().toISOString(),
   };
 
-  demoDebts.push(entry);
+  debts.push(entry);
 
   // Update customer days if it was 0
   if ((customer.days_outstanding || 0) === 0) {
@@ -919,13 +1011,14 @@ app.post('/api/customers/:id/debts', requireOwner, (req, res) => {
 
   return res.status(201).json({
     debt: entry,
-    customerSummary: calcCustomerSummary(customerId),
+    customerSummary: calcCustomerSummary(customerId, req.store),
   });
 });
 
 app.post('/api/customers/:id/payments', requireOwner, (req, res) => {
   const customerId = Number(req.params.id);
-  const customer = demoCustomers.find((c) => c.id === customerId);
+  const { customers, payments } = req.store;
+  const customer = customers.find((c) => c.id === customerId);
   if (!customer) {
     return res.status(404).json({ error: 'Customer not found.' });
   }
@@ -948,9 +1041,9 @@ app.post('/api/customers/:id/payments', requireOwner, (req, res) => {
     created_at: new Date().toISOString(),
   };
 
-  demoPayments.push(entry);
+  payments.push(entry);
 
-  const summary = calcCustomerSummary(customerId);
+  const summary = calcCustomerSummary(customerId, req.store);
   if (summary.balance <= 0) {
     customer.days_outstanding = 0;
   }
@@ -963,29 +1056,31 @@ app.post('/api/customers/:id/payments', requireOwner, (req, res) => {
 
 app.delete('/api/debts/:id', requireOwner, (req, res) => {
   const debtId = Number(req.params.id);
-  const target = demoDebts.find((item) => item.id === debtId);
+  const { debts } = req.store;
+  const target = debts.find((item) => item.id === debtId);
   if (!target) {
     return res.status(404).json({ error: 'Debt record not found.' });
   }
 
-  demoDebts = demoDebts.filter((item) => item.id !== debtId);
+  req.store.debts = debts.filter((item) => item.id !== debtId);
   return res.json({
     success: true,
-    customerSummary: calcCustomerSummary(target.customer_id),
+    customerSummary: calcCustomerSummary(target.customer_id, req.store),
   });
 });
 
 app.delete('/api/payments/:id', requireOwner, (req, res) => {
   const paymentId = Number(req.params.id);
-  const target = demoPayments.find((item) => item.id === paymentId);
+  const { payments } = req.store;
+  const target = payments.find((item) => item.id === paymentId);
   if (!target) {
     return res.status(404).json({ error: 'Payment record not found.' });
   }
 
-  demoPayments = demoPayments.filter((item) => item.id !== paymentId);
+  req.store.payments = payments.filter((item) => item.id !== paymentId);
   return res.json({
     success: true,
-    customerSummary: calcCustomerSummary(target.customer_id),
+    customerSummary: calcCustomerSummary(target.customer_id, req.store),
   });
 });
 

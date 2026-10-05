@@ -26,7 +26,7 @@ export function DashboardView({
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const { error } = useToast();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const loadDashboard = async () => {
     setIsLoading(true);
@@ -65,7 +65,9 @@ export function DashboardView({
         <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
           Sunday, September 6
         </div>
-        <h1 style={{ margin: '0 0 4px 0', fontSize: '28px', fontWeight: '700' }}>Good day, Admin!</h1>
+        <h1 style={{ margin: '0 0 4px 0', fontSize: '28px', fontWeight: '700' }}>
+          Good day, {user?.username || 'there'}!
+        </h1>
         <p style={{ margin: '0', fontSize: '14px', opacity: '0.9' }}>Here's your store's credit overview</p>
         <div style={{
           backgroundColor: '#FFFFFF',

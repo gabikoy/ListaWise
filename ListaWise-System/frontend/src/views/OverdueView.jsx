@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ClockAlert, MessageSquare, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { ClockAlert, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { RiskBadge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
-import { SmsReminderModal } from '../components/customer/SmsReminderModal';
 import { RecordPaymentModal } from '../components/customer/RecordPaymentModal';
 import { api } from '../api/client';
 import { useToast } from '../context/ToastContext';
@@ -10,7 +9,6 @@ import { useToast } from '../context/ToastContext';
 export function OverdueView({ onOpenCustomer }) {
   const [overdueList, setOverdueList] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [showSms, setShowSms] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { error } = useToast();
@@ -33,12 +31,6 @@ export function OverdueView({ onOpenCustomer }) {
 
   const totalOverdueBalance = overdueList.reduce((sum, c) => sum + (c.balance || 0), 0);
   const over60Days = overdueList.filter((c) => (c.days_outstanding || 0) >= 60);
-
-  const handleOpenSms = (cust, e) => {
-    e.stopPropagation();
-    setSelectedCustomer(cust);
-    setShowSms(true);
-  };
 
   const handleOpenPayment = (cust, e) => {
     e.stopPropagation();
@@ -198,16 +190,6 @@ export function OverdueView({ onOpenCustomer }) {
 
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
-                        onClick={(e) => handleOpenSms(cust, e)}
-                        className="btn btn-secondary btn-sm"
-                        title="Send SMS Reminder"
-                        style={{ backgroundColor: '#FFFFFF' }}
-                      >
-                        <MessageSquare size={14} color="var(--green-800)" />
-                        <span>SMS</span>
-                      </button>
-
-                      <button
                         onClick={(e) => handleOpenPayment(cust, e)}
                         className="btn btn-success btn-sm"
                         title="Record Payment"
@@ -223,14 +205,6 @@ export function OverdueView({ onOpenCustomer }) {
           </div>
         )}
       </div>
-
-      {showSms && selectedCustomer && (
-        <SmsReminderModal
-          isOpen={showSms}
-          onClose={() => setShowSms(false)}
-          customer={selectedCustomer}
-        />
-      )}
 
       {showPayment && selectedCustomer && (
         <RecordPaymentModal

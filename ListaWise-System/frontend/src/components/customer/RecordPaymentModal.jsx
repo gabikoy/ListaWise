@@ -3,7 +3,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../api/client';
-import { CheckCircle2, Banknote, Smartphone, CreditCard } from 'lucide-react';
+import { CheckCircle2, Banknote, Smartphone } from 'lucide-react';
 
 export function RecordPaymentModal({ isOpen, onClose, customer, onSuccess }) {
   const [amount, setAmount] = useState('');
@@ -157,11 +157,10 @@ export function RecordPaymentModal({ isOpen, onClose, customer, onSuccess }) {
         {/* Payment Method Selector */}
         <div className="form-group">
           <label className="form-label">Payment Method</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
             {[
               { id: 'Cash', label: 'Cash', icon: Banknote },
               { id: 'GCash', label: 'GCash', icon: Smartphone },
-              { id: 'Bank', label: 'Bank Transfer', icon: CreditCard },
             ].map((m) => {
               const Icon = m.icon;
               const isSelected = paymentMethod === m.id;
