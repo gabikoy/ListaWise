@@ -489,15 +489,21 @@ const handleLogin = async (req, res) => {
   }
 
   try {
-    let user;
+    let user = null;
 
     if (pool) {
-      const result = await pool.query(
-        'SELECT id, username, password_hash, role FROM users WHERE username = $1 LIMIT 1',
-        [username]
-      );
-      user = result.rows[0];
-    } else {
+      try {
+        const result = await pool.query(
+          'SELECT id, username, password_hash, role, name FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1',
+          [username]
+        );
+        user = result.rows[0];
+      } catch (dbErr) {
+        console.warn('Database query fallback:', dbErr.message);
+      }
+    }
+
+    if (!user) {
       user = demoUsers.find(
         (candidate) => candidate.username.toLowerCase() === username.toLowerCase()
       );
@@ -570,30 +576,34 @@ const handleRegister = async (req, res) => {
   try {
     // Check if username already exists
     if (pool) {
-      const existing = await pool.query('SELECT id FROM users WHERE username = $1 LIMIT 1', [username]);
-      if (existing.rows.length > 0) {
-        return res.status(409).json({ error: 'Username is already taken. Please choose another.' });
+      try {
+        const existing = await pool.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
+        if (existing.rows.length > 0) {
+          return res.status(409).json({ error: 'Username is already taken. Please choose another.' });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        const inserted = await pool.query(
+          'INSERT INTO users (username, password_hash, role, name) VALUES ($1, $2, $3, $4) RETURNING id, username, role, name',
+          [username, passwordHash, role, name]
+        );
+        const newUser = inserted.rows[0];
+        userStores.set(Number(newUser.id), createEmptyStore());
+
+        const token = jwt.sign(
+          { userId: newUser.id, username: newUser.username, role: newUser.role },
+          JWT_SECRET,
+          { expiresIn: '8h' }
+        );
+
+        return res.status(201).json({
+          token,
+          user: newUser,
+          message: 'Account registered successfully.',
+        });
+      } catch (dbErr) {
+        console.warn('Database register fallback:', dbErr.message);
       }
-
-      const passwordHash = await bcrypt.hash(password, 10);
-      const inserted = await pool.query(
-        'INSERT INTO users (username, password_hash, role, name) VALUES ($1, $2, $3, $4) RETURNING id, username, role, name',
-        [username, passwordHash, role, name]
-      );
-      const newUser = inserted.rows[0];
-      userStores.set(Number(newUser.id), createEmptyStore());
-
-      const token = jwt.sign(
-        { userId: newUser.id, username: newUser.username, role: newUser.role },
-        JWT_SECRET,
-        { expiresIn: '8h' }
-      );
-
-      return res.status(201).json({
-        token,
-        user: newUser,
-        message: 'Account registered successfully.',
-      });
     } else {
       const existing = demoUsers.find((u) => u.username.toLowerCase() === username.toLowerCase());
       if (existing) {
