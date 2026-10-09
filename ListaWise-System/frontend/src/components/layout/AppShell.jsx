@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MobileNav } from './MobileNav';
 import { DashboardView } from '../../views/DashboardView';
 import { CustomersView } from '../../views/CustomersView';
@@ -18,6 +18,28 @@ export function AppShell() {
   const handleRefresh = () => {
     setRefreshKey((k) => k + 1);
   };
+
+  useEffect(() => {
+    // Auto-refresh in background every 30s to recalculate real-time daily metrics
+    const interval = setInterval(() => {
+      setRefreshKey((k) => k + 1);
+    }, 30000);
+
+    // Auto-refresh when user switches back to the app
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setRefreshKey((k) => k + 1);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, []);
 
   const handleOpenCustomer = (id) => {
     setSelectedCustomerId(id);

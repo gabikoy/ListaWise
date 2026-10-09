@@ -314,9 +314,22 @@ function calcCustomerSummary(customerId, store) {
   const totalPaid = payments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const balance = Math.max(totalDebt - totalPaid, 0);
 
-  // Compute Days Outstanding from oldest unpaid debt if balance > 0
-  let daysOutstanding = customer.days_outstanding || 0;
-  if (balance <= 0) {
+  // Compute real-time dynamic days outstanding from the oldest unpaid debt
+  let daysOutstanding = 0;
+  if (balance > 0) {
+    if (debts.length > 0) {
+      const oldestDebt = [...debts].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0];
+      const debtDate = new Date(oldestDebt.created_at || Date.now());
+      const diffMs = Math.max(Date.now() - debtDate.getTime(), 0);
+      daysOutstanding = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    } else if (customer.created_at) {
+      const createdDate = new Date(customer.created_at);
+      const diffMs = Math.max(Date.now() - createdDate.getTime(), 0);
+      daysOutstanding = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    } else {
+      daysOutstanding = Number(customer.days_outstanding || 0);
+    }
+  } else {
     daysOutstanding = 0;
   }
 
