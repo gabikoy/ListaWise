@@ -50,6 +50,9 @@ const pool = process.env.DATABASE_URL
       ssl: process.env.DATABASE_URL.includes('localhost')
         ? false
         : { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 10000,
+      max: 10,
     })
   : null;
 
