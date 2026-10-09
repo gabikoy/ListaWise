@@ -19,13 +19,9 @@ export function Header({
   }, []);
 
   const formattedDate = now.toLocaleDateString('en-US', {
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
-  });
-  const formattedTime = now.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
   });
 
   return (
@@ -69,7 +65,7 @@ export function Header({
             </span>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-on-green-subtle)', marginTop: '2px' }}>
-            {user?.name || user?.username} · <span style={{ color: 'var(--amber-border)' }}>{formattedDate} · {formattedTime}</span>
+            {user?.name || user?.username} · <span style={{ color: 'var(--amber-border)' }}>{formattedDate}</span>
           </div>
         </div>
       </div>
