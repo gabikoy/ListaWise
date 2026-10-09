@@ -40,8 +40,12 @@ export function DashboardView({
     }
   };
 
+  const [currentDate, setCurrentDate] = useState(new Date());
+
   useEffect(() => {
     loadDashboard();
+    const timer = setInterval(() => setCurrentDate(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   if (isLoading) {
@@ -62,8 +66,18 @@ export function DashboardView({
       <button type="button" onClick={() => logout('You have signed out.')} aria-label="Log out" style={{ position: 'absolute', top: 22, right: 20, background: 'transparent', border: 0, color: '#fff', cursor: 'pointer' }}>
         <LogOut size={17} />
       </button>
-        <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
-          Sunday, September 6
+        <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '4px', opacity: 0.95, letterSpacing: '0.2px' }}>
+          {currentDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })} · {currentDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+          })}
         </div>
         <h1 style={{ margin: '0 0 4px 0', fontSize: '28px', fontWeight: '700' }}>
           Good day, {user?.username || 'there'}!

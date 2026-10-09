@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserPlus, Settings, RefreshCw, Store } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { RoleBadge } from '../common/Badge';
@@ -11,9 +11,21 @@ export function Header({
   isRefreshing,
 }) {
   const { user, isOwner } = useAuth();
-  const today = new Date().toLocaleDateString('en-US', {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedDate = now.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
+  });
+  const formattedTime = now.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
   });
 
   return (
@@ -57,7 +69,7 @@ export function Header({
             </span>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-on-green-subtle)', marginTop: '2px' }}>
-            {user?.name || user?.username} · <span style={{ color: 'var(--amber-border)' }}>{today}</span>
+            {user?.name || user?.username} · <span style={{ color: 'var(--amber-border)' }}>{formattedDate} · {formattedTime}</span>
           </div>
         </div>
       </div>
