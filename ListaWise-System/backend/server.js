@@ -25,6 +25,15 @@ app.use(cors({
 
 app.use(express.json({ limit: '64kb' }));
 
+// Health Check Endpoints for Render and Monitoring
+app.get(['/health', '/api/health'], (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'listawise-api',
+    time: new Date().toISOString(),
+  });
+});
+
 // Rate Limiting for Auth
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -34,9 +43,14 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Database pool setup (optional fallback)
+// Database pool setup (with Render SSL support)
 const pool = process.env.DATABASE_URL
-  ? new Pool({ connectionString: process.env.DATABASE_URL })
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL.includes('localhost')
+        ? false
+        : { rejectUnauthorized: false },
+    })
   : null;
 
 // Demo Store Users
