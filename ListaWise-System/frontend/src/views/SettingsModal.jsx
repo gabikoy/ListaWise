@@ -3,7 +3,7 @@ import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Lock, Shield, Clock, Key } from 'lucide-react';
+import { Lock, Shield, Clock, Key, LogOut } from 'lucide-react';
 
 export function SettingsModal({ isOpen, onClose }) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -11,7 +11,7 @@ export function SettingsModal({ isOpen, onClose }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { user, changePassword } = useAuth();
+  const { user, changePassword, logout } = useAuth();
   const { error, success } = useToast();
 
   const handlePasswordSubmit = async (e) => {
@@ -136,7 +136,42 @@ export function SettingsModal({ isOpen, onClose }) {
             Update Password
           </Button>
         </form>
+
+        {/* Sign Out Section */}
+        <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid var(--border-light, #e2ded5)' }}>
+          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--green-950)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <LogOut size={16} />
+            <span>Account Session</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              logout('You have signed out.');
+            }}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              backgroundColor: '#fee2e2',
+              color: '#991b1b',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              touchAction: 'manipulation',
+            }}
+          >
+            <LogOut size={16} />
+            Sign Out of ListaWise
+          </button>
+        </div>
       </div>
     </Modal>
   );
 }
+

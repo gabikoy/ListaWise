@@ -1,25 +1,49 @@
 import { useState } from 'react';
-import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { WebView } from 'react-native-webview';
 
 export default function App() {
   const [hasError, setHasError] = useState(false);
-  const defaultUrl = Platform.OS === 'android' ? 'http://10.0.2.2:5173' : 'http://localhost:5173';
-  const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL || defaultUrl;
+  const defaultUrl = process.env.EXPO_PUBLIC_WEB_APP_URL || 'https://listawise.pages.dev';
+  const [urlInput, setUrlInput] = useState(defaultUrl);
+  const [activeUrl, setActiveUrl] = useState(defaultUrl);
+
+  const handleConnect = () => {
+    let cleanUrl = urlInput.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = 'http://' + cleanUrl;
+    }
+    setActiveUrl(cleanUrl);
+    setHasError(false);
+  };
 
   if (hasError) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.message}>
-          <Text style={styles.title}>ListaWise could not connect</Text>
+          <Text style={styles.title}>ListaWise Connection</Text>
           <Text style={styles.body}>
-            Start the frontend with `npm run dev`, or set EXPO_PUBLIC_WEB_APP_URL to the
-            computer&apos;s local network address.
+            Enter your server URL or your computer's local network address:
           </Text>
-          <Text style={styles.url}>{webAppUrl}</Text>
-          <Text style={styles.retry} onPress={() => setHasError(false)}>
-            Try again
+          
+          <TextInput
+            style={styles.input}
+            value={urlInput}
+            onChangeText={setUrlInput}
+            placeholder="http://10.225.210.58:5173"
+            placeholderTextColor="#8aa89b"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
+
+          <TouchableOpacity style={styles.button} onPress={handleConnect}>
+            <Text style={styles.buttonText}>Connect</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.hint}>
+            Ensure your computer and phone are connected to the same Wi-Fi network and `npm run dev` is running.
           </Text>
         </View>
         <StatusBar style="auto" />
@@ -30,7 +54,8 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <WebView
-        source={{ uri: webAppUrl }}
+        key={activeUrl}
+        source={{ uri: activeUrl }}
         style={styles.webview}
         startInLoadingState
         renderLoading={() => (
@@ -66,7 +91,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 28,
+    padding: 24,
   },
   title: {
     color: '#0f3d22',
@@ -75,22 +100,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   body: {
-    marginTop: 12,
+    marginTop: 10,
+    marginBottom: 20,
     color: '#246b44',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#2e7d4f',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
+    color: '#0f3d22',
+    marginBottom: 16,
   },
-  url: {
-    marginTop: 14,
-    color: '#246b44',
-    fontSize: 13,
-    textAlign: 'center',
+  button: {
+    width: '100%',
+    backgroundColor: '#2e7d4f',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
   },
-  retry: {
-    marginTop: 22,
-    color: '#2e7d4f',
+  buttonText: {
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  hint: {
+    marginTop: 20,
+    color: '#6b8a78',
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

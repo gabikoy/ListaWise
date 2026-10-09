@@ -1,3 +1,6 @@
 {
-    "cmake.sourceDirectory": "C:/Users/yukis/OneDrive/ドキュメント/listawise/ListaWise-System/flutter_backup/windows"
+    "cmake.sourceDirectory": "C:/Users/yukis/OneDrive/ドキュメント/listawise/ListaWise-System/flutter_backup/windows",
+    "explorer.decorations.colors": false,
+    "explorer.decorations.badges": false,
+    "git.decorations.enabled": false
 }

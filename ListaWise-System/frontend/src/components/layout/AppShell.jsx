@@ -5,6 +5,7 @@ import { CustomersView } from '../../views/CustomersView';
 import { OverdueView } from '../../views/OverdueView';
 import { RiskView } from '../../views/RiskView';
 import { ReportsView } from '../../views/ReportsView';
+import { SettingsModal } from '../../views/SettingsModal';
 import { CustomerDrawer } from '../customer/CustomerDrawer';
 import { AddCustomerModal } from '../customer/AddCustomerModal';
 import { ChatbotWidget } from '../chatbot/ChatbotWidget';
@@ -13,6 +14,7 @@ export function AppShell() {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleRefresh = () => {
@@ -60,6 +62,7 @@ export function AppShell() {
               onOpenCustomer={handleOpenCustomer}
               onOpenAddCustomer={() => setShowAddCustomer(true)}
               onNavigateTab={(tab) => setCurrentTab(tab)}
+              onOpenSettings={() => setShowSettings(true)}
             />
           )}
 
@@ -108,6 +111,13 @@ export function AppShell() {
           isOpen={showAddCustomer}
           onClose={() => setShowAddCustomer(false)}
           onSuccess={() => handleRefresh()}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsModal
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
         />
       )}
 

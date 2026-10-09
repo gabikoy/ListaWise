@@ -38,7 +38,27 @@ export function ReportsView() {
           <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 20 }}>Summary Report</h1>
           <p style={{ margin: '3px 0 0', fontSize: 11, opacity: 0.75 }}>As of {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
         </div>
-        <button type="button" onClick={() => logout('You have signed out.')} aria-label="Log out" style={{ background: 'transparent', border: 0, color: '#fff', padding: 6, cursor: 'pointer' }}><LogOut size={17} /></button>
+        <button
+          type="button"
+          onClick={() => logout('You have signed out.')}
+          aria-label="Log out"
+          title="Log out"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.15)',
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+          }}
+        >
+          <LogOut size={16} />
+        </button>
       </header>
       <main style={{ padding: '14px 4px 80px' }}>
         <section style={{ background: '#fff', border: '1px solid #ead8b8', borderRadius: 15, padding: '16px 18px', marginBottom: 14 }}>

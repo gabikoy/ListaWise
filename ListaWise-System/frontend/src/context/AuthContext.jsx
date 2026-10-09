@@ -34,6 +34,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback((reason = '') => {
     localStorage.removeItem('lw_auth_token');
     localStorage.removeItem('lw_auth_user');
+    sessionStorage.clear();
     setToken(null);
     setUser(null);
     setShowInactivityWarning(false);

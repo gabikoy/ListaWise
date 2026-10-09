@@ -37,11 +37,28 @@ export function CustomersView({ onOpenCustomer, onOpenAddCustomer }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 20 }}>Customers</h1>
-            <p style={{ margin: '3px 0 0', fontSize: 11, opacity: 0.75 }}>{customers.length} registered</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button type="button" onClick={() => logout('You have signed out.')} aria-label="Log out" style={{ background: 'transparent', border: 0, color: '#fff', padding: 6, cursor: 'pointer' }}>
-              <LogOut size={17} />
+            <button
+              type="button"
+              onClick={() => logout('You have signed out.')}
+              aria-label="Log out"
+              title="Log out"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              <LogOut size={16} />
             </button>
             {isOwner && (
               <button type="button" onClick={onOpenAddCustomer} aria-label="Add customer" style={{ width: 36, height: 36, border: 0, borderRadius: '50%', background: '#f2a52b', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>

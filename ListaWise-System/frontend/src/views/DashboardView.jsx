@@ -12,6 +12,7 @@ import {
   MessageSquare,
   FileSpreadsheet,
   LogOut,
+  Settings,
 } from 'lucide-react';
 import { RiskBadge } from '../components/common/Badge';
 import { api } from '../api/client';
@@ -22,6 +23,7 @@ export function DashboardView({
   onOpenCustomer,
   onOpenAddCustomer,
   onNavigateTab,
+  onOpenSettings,
 }) {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,9 +65,52 @@ export function DashboardView({
       
       {/* Solid Green Upper Area (No header bar, no logos, just green) */}
       <div style={{ padding: '24px', paddingBottom: '20px', color: '#FFFFFF', position: 'relative' }}>
-      <button type="button" onClick={() => logout('You have signed out.')} aria-label="Log out" style={{ position: 'absolute', top: 22, right: 20, background: 'transparent', border: 0, color: '#fff', cursor: 'pointer' }}>
-        <LogOut size={17} />
-      </button>
+        <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', alignItems: 'center', gap: '8px', zIndex: 99 }}>
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              aria-label="Store Settings"
+              title="Store Settings"
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              <Settings size={18} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => logout('You have signed out.')}
+            aria-label="Log out"
+            title="Log out"
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              touchAction: 'manipulation',
+            }}
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
         <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px', opacity: 0.95 }}>
           {currentDate.toLocaleDateString('en-US', {
             weekday: 'long',

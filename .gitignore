@@ -1,2 +1,8 @@
 node_modules
-node_modules
+.expo/
+dist/
+.wrangler/
+.env*
+!*.env.example
+*.log
+
