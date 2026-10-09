@@ -561,11 +561,10 @@ const handleLogin = async (req, res) => {
 app.post('/api/login', authLimiter, handleLogin);
 app.post('/api/auth/login', authLimiter, handleLogin);
 
-// ─── Registration Endpoint ────────────────────────────────────────────────────
 const handleRegister = async (req, res) => {
   const username = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
-  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : (req.body?.store_name || username);
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : (req.body?.store_name || req.body?.storeName || username);
   const role = req.body?.role === 'staff' ? 'staff' : 'owner';
 
   if (!username || username.length < 3) {
@@ -577,11 +576,12 @@ const handleRegister = async (req, res) => {
   }
 
   try {
-    // Check if username already exists
+    let newUser = null;
+
     if (pool) {
       try {
         const existing = await pool.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
-        if (existing.rows.length > 0) {
+        if (existing.rows && existing.rows.length > 0) {
           return res.status(409).json({ error: 'Username is already taken. Please choose another.' });
         }
 
@@ -590,24 +590,15 @@ const handleRegister = async (req, res) => {
           'INSERT INTO users (username, password_hash, role, name) VALUES ($1, $2, $3, $4) RETURNING id, username, role, name',
           [username, passwordHash, role, name]
         );
-        const newUser = inserted.rows[0];
-        userStores.set(Number(newUser.id), createEmptyStore());
-
-        const token = jwt.sign(
-          { userId: newUser.id, username: newUser.username, role: newUser.role },
-          JWT_SECRET,
-          { expiresIn: '8h' }
-        );
-
-        return res.status(201).json({
-          token,
-          user: newUser,
-          message: 'Account registered successfully.',
-        });
+        if (inserted.rows && inserted.rows.length > 0) {
+          newUser = inserted.rows[0];
+        }
       } catch (dbErr) {
         console.warn('Database register fallback:', dbErr.message);
       }
-    } else {
+    }
+
+    if (!newUser) {
       const existing = demoUsers.find((u) => u.username.toLowerCase() === username.toLowerCase());
       if (existing) {
         return res.status(409).json({ error: 'Username is already taken. Please choose another.' });
@@ -615,7 +606,7 @@ const handleRegister = async (req, res) => {
 
       const nextId = demoUsers.reduce((max, u) => Math.max(max, u.id), 0) + 1;
       const passwordHash = await bcrypt.hash(password, 10);
-      const newUser = {
+      newUser = {
         id: nextId,
         username,
         role,
@@ -625,25 +616,26 @@ const handleRegister = async (req, res) => {
       };
 
       demoUsers.push(newUser);
-      userStores.set(newUser.id, createEmptyStore());
-
-      const token = jwt.sign(
-        { userId: newUser.id, username: newUser.username, role: newUser.role },
-        JWT_SECRET,
-        { expiresIn: '8h' }
-      );
-
-      return res.status(201).json({
-        token,
-        user: {
-          id: newUser.id,
-          username: newUser.username,
-          role: newUser.role,
-          name: newUser.name,
-        },
-        message: 'Account registered successfully.',
-      });
     }
+
+    userStores.set(Number(newUser.id), createEmptyStore());
+
+    const token = jwt.sign(
+      { userId: newUser.id, username: newUser.username, role: newUser.role },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    return res.status(201).json({
+      token,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        role: newUser.role,
+        name: newUser.name || newUser.username,
+      },
+      message: 'Account registered successfully.',
+    });
   } catch (error) {
     console.error('Registration error:', error);
     return res.status(500).json({ error: 'Failed to create store account. Please try again.' });
@@ -657,12 +649,9 @@ app.post('/api/auth/register', authLimiter, handleRegister);
 app.use('/api', authMiddleware);
 app.use('/api', (req, res, next) => {
   let store = getStore(req.userId);
-  if (!store && pool) {
+  if (!store) {
     store = createEmptyStore();
     userStores.set(Number(req.userId), store);
-  }
-  if (!store) {
-    return res.status(401).json({ error: 'No ledger is associated with this account.' });
   }
   req.store = store;
   return next();
