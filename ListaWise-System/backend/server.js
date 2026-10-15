@@ -1128,9 +1128,16 @@ app.delete('/api/customers/:id', requireOwner, async (req, res) => {
       user = result.rows[0];
     } catch (error) {
       console.error('Customer deletion password lookup error:', error);
-      return res.status(503).json({
-        error: 'Could not verify your password right now. Please try again shortly.',
-      });
+      user = demoUsers.find(
+        (candidate) =>
+          Number(candidate.id) === Number(req.userId) &&
+          candidate.username === req.username
+      );
+      if (!user) {
+        return res.status(503).json({
+          error: 'Could not verify your password right now. Please try again shortly.',
+        });
+      }
     }
   } else {
     user = demoUsers.find((candidate) => candidate.id === req.userId);
