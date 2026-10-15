@@ -57,6 +57,8 @@ export default function App() {
         key={activeUrl}
         source={{ uri: activeUrl }}
         style={styles.webview}
+        cacheEnabled={false}
+        cacheMode={Platform.OS === 'android' ? 'LOAD_NO_CACHE' : undefined}
         startInLoadingState
         renderLoading={() => (
           <View style={styles.loading}>

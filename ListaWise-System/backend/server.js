@@ -1118,30 +1118,44 @@ app.delete('/api/customers/:id', requireOwner, async (req, res) => {
     return res.status(400).json({ error: 'Your password is required to delete a customer.' });
   }
 
-  try {
-    let user;
-    if (pool) {
+  let user;
+  if (pool) {
+    try {
       const result = await pool.query(
         'SELECT password_hash FROM users WHERE id = $1 LIMIT 1',
         [req.userId]
       );
       user = result.rows[0];
-    } else {
-      user = demoUsers.find((candidate) => candidate.id === req.userId);
+    } catch (error) {
+      console.error('Customer deletion password lookup error:', error);
+      return res.status(503).json({
+        error: 'Could not verify your password right now. Please try again shortly.',
+      });
     }
+  } else {
+    user = demoUsers.find((candidate) => candidate.id === req.userId);
+  }
 
-    if (!user) {
-      return res.status(404).json({ error: 'User account not found.' });
-    }
+  if (!user) {
+    return res.status(404).json({ error: 'User account not found.' });
+  }
 
-    let passwordMatches = user.password === password;
-    if (!passwordMatches && user.password_hash) {
+  let passwordMatches = user.password === password;
+  if (!passwordMatches && user.password_hash) {
+    try {
       passwordMatches = await bcrypt.compare(password, user.password_hash);
+    } catch (error) {
+      console.error('Customer deletion password verification error:', error);
+      return res.status(500).json({
+        error: 'Could not verify your password. Please contact support.',
+      });
     }
-    if (!passwordMatches) {
-      return res.status(403).json({ error: 'Password does not match.' });
-    }
+  }
+  if (!passwordMatches) {
+    return res.status(403).json({ error: 'Password does not match.' });
+  }
 
+  try {
     const customerId = Number(req.params.id);
     const { customers, debts, payments } = req.store;
     const index = customers.findIndex((item) => item.id === customerId);
