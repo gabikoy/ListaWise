@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUp, X } from 'lucide-react';
 import { api } from '../../api/client';
 
-const suggestedPrompts = ['Total utang?', "Who's high risk?", 'Most overdue?'];
+const suggestedPrompts = ['Total utang?', "Who's high risk?", 'Most overdue?', 'Paano maningil?', 'Draft reminder'];
 
 function getChatErrorMessage(error) {
   const providerMessage = String(error?.message || '').toLowerCase();
