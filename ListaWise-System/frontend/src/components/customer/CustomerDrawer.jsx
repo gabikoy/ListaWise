@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { RiskBadge, TransactionBadge } from '../common/Badge';
 import { Button } from '../common/Button';
+import { Modal } from '../common/Modal';
 import { AddDebtModal } from './AddDebtModal';
 import { RecordPaymentModal } from './RecordPaymentModal';
 import { useAuth } from '../../context/AuthContext';
@@ -35,6 +36,9 @@ export function CustomerDrawer({
   // Modals state
   const [showAddDebt, setShowAddDebt] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isDeletingCustomer, setIsDeletingCustomer] = useState(false);
 
   const { isOwner } = useAuth();
   const { success, error } = useToast();
@@ -85,20 +89,20 @@ export function CustomerDrawer({
   };
 
   const handleDeleteCustomer = async () => {
-    if (
-      !window.confirm(
-        `Are you sure you want to permanently delete "${customer?.name}" and all their debt/payment records?`
-      )
-    )
-      return;
+    if (!deletePassword.trim() || isDeletingCustomer) return;
 
+    setIsDeletingCustomer(true);
     try {
-      await api.delete(`/customers/${customer.id}`);
+      await api.delete(`/customers/${customer.id}`, { password: deletePassword });
       success(`Customer "${customer.name}" deleted.`);
+      setShowDeleteConfirmation(false);
+      setDeletePassword('');
       if (onCustomerDeleted) onCustomerDeleted(customer.id);
       onClose();
     } catch (err) {
       error(err.message || 'Failed to delete customer.');
+    } finally {
+      setIsDeletingCustomer(false);
     }
   };
 
@@ -305,7 +309,10 @@ export function CustomerDrawer({
               <div style={{ display: 'flex', gap: '6px' }}>
                 {isOwner && (
                   <button
-                    onClick={handleDeleteCustomer}
+                    onClick={() => {
+                      setDeletePassword('');
+                      setShowDeleteConfirmation(true);
+                    }}
                     className="btn btn-danger btn-sm"
                     title="Delete Customer Profile"
                   >
@@ -611,6 +618,64 @@ export function CustomerDrawer({
         />
       )}
 
+      <Modal
+        isOpen={showDeleteConfirmation}
+        onClose={() => {
+          if (isDeletingCustomer) return;
+          setShowDeleteConfirmation(false);
+          setDeletePassword('');
+        }}
+        title="Confirm customer deletion"
+        subtitle={`Enter your password to permanently delete ${customer?.name || 'this customer'}.`}
+        maxWidth="440px"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowDeleteConfirmation(false);
+                setDeletePassword('');
+              }}
+              disabled={isDeletingCustomer}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              icon={Trash2}
+              isLoading={isDeletingCustomer}
+              disabled={!deletePassword.trim()}
+              onClick={handleDeleteCustomer}
+            >
+              Permanently Delete
+            </Button>
+          </>
+        }
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleDeleteCustomer();
+          }}
+        >
+          <p style={{ marginBottom: '16px', color: 'var(--crimson-text)', fontSize: '13px' }}>
+            This will also permanently remove all of this customer&apos;s debt and payment records.
+          </p>
+          <label className="form-group">
+            <span className="form-label">Your password</span>
+            <input
+              type="password"
+              className="form-input"
+              value={deletePassword}
+              onChange={(event) => setDeletePassword(event.target.value)}
+              autoComplete="current-password"
+              autoFocus
+              required
+              disabled={isDeletingCustomer}
+            />
+          </label>
+        </form>
+      </Modal>
     </>
   );
 }

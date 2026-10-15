@@ -85,10 +85,11 @@ export const api = {
     return handleResponse(res);
   },
 
-  async delete(endpoint) {
+  async delete(endpoint, body) {
     const res = await fetch(API_BASE + endpoint, {
       method: 'DELETE',
       headers: getAuthHeaders(),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     return handleResponse(res);
   },
